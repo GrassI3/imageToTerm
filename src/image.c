@@ -17,7 +17,7 @@ image_t loadImage(char* filePath){
     }
     //allocating memory for image data
     size_t dataSize = (size_t)(width * height * channels);
-    double* data = (double*)malloc(dataSize * sizeof(double));
+    double* data = calloc(dataSize, sizeof(*data));
     //error handling if memory allocation fails
     if(!data){
         fprintf(stderr, "Error: Failed to allocate memory for image data!\n");
@@ -30,7 +30,7 @@ image_t loadImage(char* filePath){
     }
     //freeing raw image data and return
     stbi_image_free(rawData);
-    return (image_t){.data = (size_t)data, .width = (size_t)width, .height = (size_t)height, .channels = (size_t)channels};
+    return (image_t){.data = data, .width = (size_t)width, .height = (size_t)height, .channels = (size_t)channels};
 }
 
 
@@ -89,7 +89,7 @@ image_t resizeImage(image_t* ori, size_t maxWidth, size_t maxHeight, double char
         height = maxHeight;
     }
 
-    double* data = (double*)malloc(width * height * channels * sizeof(double));
+    double* data = calloc(width * height * channels, sizeof(*data));
     if(!data){
         fprintf(stderr, "Error: Failed to allocate memory for resized image data!\n");
         return (image_t){0};
@@ -114,7 +114,7 @@ image_t grayscale(image_t* ori){
     size_t height = ori->height;
     size_t channels = 1;
 
-    double* data = (double*)malloc(width * height * channels * sizeof(double));
+    double* data = calloc(width * height, sizeof(*data));
     if(!data){
         fprintf(stderr, "Error: Failed to allocate memory for grayscale image data!\n");
         return (image_t){0};
@@ -159,7 +159,7 @@ void getConvolution(image_t* img, double* kernel, double* out){
     }
 }
 
-void setSobel(image_t* img, double* out_x, double* out_y){
+void getSobel(image_t* img, double* out_x, double* out_y){
     double sobel_x[9] = {
         -1, 0, 1,
         -2, 0, 2,

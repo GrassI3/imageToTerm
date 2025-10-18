@@ -1,12 +1,13 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 #include "../include/image.h"
 #include "../include/print.h"
 
 // valid printing characters
 #define VALID_CHARS " .-=+*x#$&X@"
 #define NUM_VALID_CHARS (sizeof(VALID_CHARS) - 1)
+#define PI 3.14159265358979323846
 
 // Color ANSI codes
 #define RED "\x1B[31m"
@@ -57,6 +58,10 @@ hsv_t rgbToHsv(double red, double green, double blue){
     return hsv;
 }
 
+double calcGrayscaleFromHsv(const hsv_t* hsv){
+    return hsv->value * hsv->value;
+}
+
 char* getColourCode(const hsv_t* hsv){
     if(hsv->saturation<0.25) return WHT;
     if(hsv->hue>=30.0 && hsv->hue<90.0) return YEL;
@@ -81,4 +86,58 @@ char getSobelChar(double sobelAngle){
 }
 
 void printImage(image_t* img, double edgeThreshold){
+    image_t grayscaleImg = grayscale(img);
+    // heck is sobel? even idk but its needed for edge detection ;-;
+    double* sobelX = (double*)calloc(grayscaleImg.width * grayscaleImg.height, sizeof(double));
+    double* sobelY = (double*)calloc(grayscaleImg.width * grayscaleImg.height, sizeof(double));
+
+    if(!sobelX || !sobelY){
+        fprintf(stderr, "Error: Memory allocation failed for Sobel arrays.\n");
+        free(sobelX);
+        free(sobelY);
+        free(grayscaleImg.data);
+        return;
+    }
+
+    if(edgeThreshold<4.0) getSobel(&grayscaleImg, sobelX, sobelY);
+
+    for(size_t y=0; y<img->height; y++){
+        for(size_t x=0; x<img->width; x++){
+            double* pixel = getPixel(img, x, y);
+            size_t idx = y*img->width + x;
+            double sx = sobelX[idx];
+            double sy = sobelY[idx];
+
+            double sqrSobelMag = sx*sx + sy*sy;
+            double sobelAngle = atan2(sy,sx) * 180.0 / PI;
+
+            char asciiChar;
+            char* color = WHT;
+
+            double grayscaleImg;
+            if(img->channels <= 2){
+                // grayscale img
+                grayscaleImg = pixel[0];
+                color = WHT;
+            }else{
+                // rgb img
+                hsv_t hsv = rgbToHsv(pixel[0], pixel[1], pixel[2]);
+                grayscaleImg = calcGrayscaleFromHsv(&hsv);
+                color = getColourCode(&hsv);
+            }
+            asciiChar = getAsciiChar(grayscaleImg);
+            
+            if(sqrSobelMag >= edgeThreshold * edgeThreshold){
+                asciiChar = getSobelChar(sobelAngle);
+            }
+            printf("%s", color);
+            putchar(asciiChar);
+        }
+        printf("\n");
+    }
+    printf("%s", RESET);
+
+    free(sobelX);
+    free(sobelY);
+    freeImage(&grayscaleImg);
 }
